@@ -63,16 +63,29 @@ public class Velocity2FA {
     public void onPostLogin(PostLoginEvent event) {
         Player player = event.getPlayer();
         
-        // Check if player has staff permission and 2FA enabled
-        if (hasStaffPermission(player) && twoFactorManager.hasSecretKey(player.getUniqueId())) {
-            pendingAuthentication.add(player.getUsername());
-            
-            player.sendMessage(Component.text("=== 2FA AUTHENTICATION REQUIRED ===")
-                .color(NamedTextColor.RED));
-            player.sendMessage(Component.text("Please enter your 2FA code using: /2fa <code>")
-                .color(NamedTextColor.YELLOW));
-            player.sendMessage(Component.text("You cannot join servers until authenticated.")
-                .color(NamedTextColor.RED));
+        try {
+            // Check if player has staff permission and 2FA enabled
+            if (hasStaffPermission(player) && twoFactorManager.hasSecretKey(player.getUniqueId())) {
+                pendingAuthentication.add(player.getUsername());
+                
+                // Use scheduler to send messages after a short delay to ensure connection is stable
+                server.getScheduler().buildTask(this, () -> {
+                    try {
+                        if (player.isActive()) {
+                            player.sendMessage(Component.text("=== 2FA AUTHENTICATION REQUIRED ===")
+                                .color(NamedTextColor.RED));
+                            player.sendMessage(Component.text("Please enter your 2FA code using: /2fa <code>")
+                                .color(NamedTextColor.YELLOW));
+                            player.sendMessage(Component.text("You cannot join servers until authenticated.")
+                                .color(NamedTextColor.RED));
+                        }
+                    } catch (Exception msgEx) {
+                        logger.warn("Failed to send 2FA login message to player {}: {}", player.getUsername(), msgEx.getMessage());
+                    }
+                }).delay(1, java.util.concurrent.TimeUnit.SECONDS).schedule();
+            }
+        } catch (Exception e) {
+            logger.error("Error in PostLogin event for player {}: {}", player.getUsername(), e.getMessage(), e);
         }
     }
 
@@ -80,14 +93,25 @@ public class Velocity2FA {
     public void onServerPreConnect(ServerPreConnectEvent event) {
         Player player = event.getPlayer();
         
-        // Block server connections if staff member hasn't authenticated with 2FA
-        if (hasStaffPermission(player) && 
-            twoFactorManager.hasSecretKey(player.getUniqueId()) && 
-            !authenticatedPlayers.contains(player.getUsername())) {
-            
-            event.setResult(ServerPreConnectEvent.ServerResult.denied());
-            player.sendMessage(Component.text("You must authenticate with 2FA first! Use /2fa <code>")
-                .color(NamedTextColor.RED));
+        try {
+            // Only block server connections if staff member hasn't authenticated with 2FA
+            if (hasStaffPermission(player) && 
+                twoFactorManager.hasSecretKey(player.getUniqueId()) && 
+                !authenticatedPlayers.contains(player.getUsername())) {
+                
+                event.setResult(ServerPreConnectEvent.ServerResult.denied());
+                
+                // Send message safely with error handling
+                try {
+                    player.sendMessage(Component.text("You must authenticate with 2FA first! Use /2fa <code>")
+                        .color(NamedTextColor.RED));
+                } catch (Exception msgEx) {
+                    logger.warn("Failed to send 2FA message to player {}: {}", player.getUsername(), msgEx.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error in ServerPreConnect event for player {}: {}", player.getUsername(), e.getMessage(), e);
+            // Don't block the connection if there's an error in our plugin
         }
     }
 
