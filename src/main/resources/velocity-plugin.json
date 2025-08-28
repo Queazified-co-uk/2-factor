@@ -1,0 +1,5 @@
+id = "velocity2fa"
+name = "Velocity2FA"
+version = "1.0.0"
+authors = ["Queazified"]
+main = "com.queazified.velocity2fa.Velocity2FA"
