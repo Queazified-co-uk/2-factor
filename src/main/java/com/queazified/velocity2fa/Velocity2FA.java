@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
     name = "Velocity2FA",
     version = "1.0.0",
     description = "Two-Factor Authentication for staff members",
-    authors = {"YourName"}
+    authors = {"Queazified"}
 )
 public class Velocity2FA {
 
