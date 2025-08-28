@@ -5,7 +5,6 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.warrenstrange.googleauth.GoogleAuthenticator;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
-import com.warrenstrange.googleauth.GoogleAuthenticatorQRGenerator;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -119,10 +118,23 @@ public class TwoFactorManager {
      */
     public String generateQRUrl(String username, String secretKey) {
         String issuer = "Velocity2FA";
-        String account = username + "@YourServer";
+        String account = username + "@queazified.co.uk";
         
-        return GoogleAuthenticatorQRGenerator.getOtpAuthURL(issuer, account, 
-            authenticator.createCredentials(secretKey));
+        // Create the otpauth URL manually instead of using GoogleAuthenticatorQRGenerator
+        // Format: otpauth://totp/issuer:account?secret=SECRET&issuer=ISSUER
+        String otpAuthUrl = String.format(
+            "otpauth://totp/%s:%s?secret=%s&issuer=%s",
+            issuer,
+            account,
+            secretKey,
+            issuer
+        );
+        
+        // Generate QR code URL using Google Charts API
+        String qrUrl = "https://chart.googleapis.com/chart?chs=200x200&chld=M|0&cht=qr&chl=" + 
+                      java.net.URLEncoder.encode(otpAuthUrl, java.nio.charset.StandardCharsets.UTF_8);
+        
+        return qrUrl;
     }
 
     /**
