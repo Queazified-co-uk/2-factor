@@ -92,22 +92,27 @@ public class Velocity2FA {
     @Subscribe
     public void onServerPreConnect(ServerPreConnectEvent event) {
         Player player = event.getPlayer();
-        
         try {
-            // Only block server connections if staff member hasn't authenticated with 2FA
-            if (hasStaffPermission(player) && 
-                twoFactorManager.hasSecretKey(player.getUniqueId()) && 
-                !authenticatedPlayers.contains(player.getUsername())) {
-                
-                event.setResult(ServerPreConnectEvent.ServerResult.denied());
-                
-                // Send message safely with error handling
-                try {
-                    player.sendMessage(Component.text("You must authenticate with 2FA first! Use /2fa <code>")
-                        .color(NamedTextColor.RED));
-                } catch (Exception msgEx) {
-                    logger.warn("Failed to send 2FA message to player {}: {}", player.getUsername(), msgEx.getMessage());
+            String limboServer = configManager.getConfig().limboServer;
+            boolean isStaff = hasStaffPermission(player);
+            boolean has2FA = twoFactorManager.hasSecretKey(player.getUniqueId());
+            boolean isAuthenticated = authenticatedPlayers.contains(player.getUsername());
+            String targetServer = event.getOriginalServer().getServerInfo().getName();
+
+            // If staff, has 2FA, and not authenticated
+            if (isStaff && has2FA && !isAuthenticated) {
+                if (!targetServer.equalsIgnoreCase(limboServer)) {
+                    event.setResult(ServerPreConnectEvent.ServerResult.denied());
+                    try {
+                        player.sendMessage(Component.text("You must authenticate with 2FA first! Use /2fa <code>")
+                            .color(NamedTextColor.RED));
+                        player.sendMessage(Component.text("You may only join the lobby/limbo server until authenticated.")
+                            .color(NamedTextColor.YELLOW));
+                    } catch (Exception msgEx) {
+                        logger.warn("Failed to send 2FA message to player {}: {}", player.getUsername(), msgEx.getMessage());
+                    }
                 }
+                // If joining limbo, allow
             }
         } catch (Exception e) {
             logger.error("Error in ServerPreConnect event for player {}: {}", player.getUsername(), e.getMessage(), e);

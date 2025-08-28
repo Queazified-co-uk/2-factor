@@ -87,7 +87,8 @@ public class ConfigManager {
      * Configuration class
      */
     public static class Config {
-        public String serverName = "YourServer";
+    public String serverName = "PROXY-01";
+    public String limboServer = "limbo"; // Server name for unauthenticated staff
         public String issuerName = "Velocity2FA";
         public boolean enforceFor2FA = true;
         public boolean requireCodeOnJoin = true;
