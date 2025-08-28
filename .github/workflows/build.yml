@@ -1,34 +1,65 @@
-name: Build Velocity 2FA Plugin
+name: Build Velocity Plugin
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main, master, develop ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ main, master, develop ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    
     steps:
-      # Checkout repo
-      - name: Checkout source
-        uses: actions/checkout@v4
-
-      # Set up JDK (Velocity supports Java 17+)
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
-
-      # Build with Maven
-      - name: Build with Maven
-        run: mvn -B package --file pom.xml
-
-      # Upload plugin jar as an artifact
-      - name: Upload plugin jar
-        uses: actions/upload-artifact@v4
-        with:
-          name: velocity-2fa-plugin
-          path: target/*.jar
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+    
+    - name: Cache Maven dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+    
+    - name: Validate Maven project
+      run: mvn validate
+    
+    - name: Compile project
+      run: mvn compile
+    
+    - name: Run tests
+      run: mvn test
+    
+    - name: Build plugin
+      run: mvn clean package
+    
+    - name: List target directory (for debugging)
+      run: ls -la target/
+    
+    - name: Upload plugin artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: velocity-2fa-plugin-${{ github.run_number }}
+        path: |
+          target/*.jar
+          !target/original-*.jar
+        retention-days: 30
+        if-no-files-found: error
+    
+    - name: Upload plugin to release (on tag)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          target/*.jar
+          !target/original-*.jar
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
