@@ -1,200 +1,198 @@
 package com.queazified.velocity2fa;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
-import com.warrenstrange.googleauth.GoogleAuthenticator;
-import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
-import org.slf4j.Logger;
+import com.velocitypowered.api.command.CommandSource;
+import com.velocitypowered.api.command.SimpleCommand;
+import com.velocitypowered.api.proxy.Player;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
-public class TwoFactorManager {
-    
-    private final Path dataDirectory;
-    private final Logger logger;
-    private final GoogleAuthenticator authenticator;
-    private final Gson gson;
-    private final File secretsFile;
-    private final Map<UUID, String> secretKeys;
+public class TwoFactorCommand implements SimpleCommand {
 
-    public TwoFactorManager(Path dataDirectory, Logger logger) {
-        this.dataDirectory = dataDirectory;
-        this.logger = logger;
-        this.authenticator = new GoogleAuthenticator();
-        this.gson = new GsonBuilder().setPrettyPrinting().create();
-        this.secretsFile = dataDirectory.resolve("2fa-secrets.json").toFile();
-        this.secretKeys = new ConcurrentHashMap<>();
-        
-        // Create data directory if it doesn't exist
-        try {
-            if (!dataDirectory.toFile().exists()) {
-                dataDirectory.toFile().mkdirs();
-            }
-        } catch (Exception e) {
-            logger.error("Failed to create data directory", e);
-        }
-        
-        loadSecrets();
+    private final Velocity2FA plugin;
+
+    public TwoFactorCommand(Velocity2FA plugin) {
+        this.plugin = plugin;
     }
 
-    /**
-     * Generate a new secret key for a player
-     */
-    public String generateSecretKey(UUID playerUuid) {
-        GoogleAuthenticatorKey key = authenticator.createCredentials();
-        String secretKey = key.getKey();
-        
-        secretKeys.put(playerUuid, secretKey);
-        saveSecrets();
-        
-        logger.info("Generated new 2FA secret for player: {}", playerUuid);
-        return secretKey;
-    }
+    @Override
+    public void execute(Invocation invocation) {
+        CommandSource source = invocation.source();
+        String[] args = invocation.arguments();
 
-    /**
-     * Check if a player has a secret key
-     */
-    public boolean hasSecretKey(UUID playerUuid) {
-        return secretKeys.containsKey(playerUuid);
-    }
-
-    /**
-     * Get a player's secret key
-     */
-    public String getSecretKey(UUID playerUuid) {
-        return secretKeys.get(playerUuid);
-    }
-
-    /**
-     * Verify a 2FA code for a player
-     */
-    public boolean verifyCode(UUID playerUuid, String code) {
-        String secretKey = secretKeys.get(playerUuid);
-        if (secretKey == null) {
-            return false;
-        }
-
-        try {
-            int codeInt = Integer.parseInt(code);
-            boolean isValid = authenticator.authorize(secretKey, codeInt);
-            
-            if (isValid) {
-                logger.info("2FA verification successful for player: {}", playerUuid);
-            } else {
-                logger.warn("2FA verification failed for player: {}", playerUuid);
-            }
-            
-            return isValid;
-        } catch (NumberFormatException e) {
-            logger.warn("Invalid 2FA code format from player {}: {}", playerUuid, code);
-            return false;
-        }
-    }
-
-    /**
-     * Remove a player's secret key
-     */
-    public boolean removeSecretKey(UUID playerUuid) {
-        boolean removed = secretKeys.remove(playerUuid) != null;
-        if (removed) {
-            saveSecrets();
-            logger.info("Removed 2FA secret for player: {}", playerUuid);
-        }
-        return removed;
-    }
-
-    /**
-     * Generate QR code URL for setup
-     */
-    public String generateQRUrl(String username, String secretKey) {
-        String issuer = "Velocity2FA";
-        String account = username + "@queazified.co.uk";
-        
-        // Create the otpauth URL manually instead of using GoogleAuthenticatorQRGenerator
-        // Format: otpauth://totp/issuer:account?secret=SECRET&issuer=ISSUER
-        String otpAuthUrl = String.format(
-            "otpauth://totp/%s:%s?secret=%s&issuer=%s",
-            issuer,
-            account,
-            secretKey,
-            issuer
-        );
-        
-        // Generate QR code URL using Google Charts API
-        String qrUrl = "https://chart.googleapis.com/chart?chs=200x200&chld=M|0&cht=qr&chl=" + 
-                      java.net.URLEncoder.encode(otpAuthUrl, java.nio.charset.StandardCharsets.UTF_8);
-        
-        return qrUrl;
-    }
-
-    /**
-     * Get all players with 2FA enabled
-     */
-    public Map<UUID, String> getAllSecrets() {
-        return new HashMap<>(secretKeys);
-    }
-
-    /**
-     * Load secrets from file
-     */
-    private void loadSecrets() {
-        if (!secretsFile.exists()) {
-            logger.info("2FA secrets file doesn't exist, creating new one");
+        if (!(source instanceof Player)) {
+            source.sendMessage(Component.text("Only players can use this command!")
+                .color(NamedTextColor.RED));
             return;
         }
 
-        try (FileReader reader = new FileReader(secretsFile)) {
-            Type type = new TypeToken<Map<String, String>>(){}.getType();
-            Map<String, String> loadedSecrets = gson.fromJson(reader, type);
-            
-            if (loadedSecrets != null) {
-                secretKeys.clear();
-                for (Map.Entry<String, String> entry : loadedSecrets.entrySet()) {
-                    try {
-                        UUID uuid = UUID.fromString(entry.getKey());
-                        secretKeys.put(uuid, entry.getValue());
-                    } catch (IllegalArgumentException e) {
-                        logger.warn("Invalid UUID in secrets file: {}", entry.getKey());
-                    }
+        Player player = (Player) source;
+
+        if (args.length == 0) {
+            showHelp(player);
+            return;
+        }
+
+        switch (args[0].toLowerCase()) {
+            case "setup":
+                setupTwoFactor(player);
+                break;
+            case "verify":
+            case "auth":
+                if (args.length < 2) {
+                    player.sendMessage(Component.text("Usage: /2fa verify <code>")
+                        .color(NamedTextColor.RED));
+                    return;
                 }
-                logger.info("Loaded {} 2FA secrets from file", secretKeys.size());
-            }
-        } catch (IOException e) {
-            logger.error("Failed to load 2FA secrets", e);
+                verifyCode(player, args[1]);
+                break;
+            case "disable":
+                disableTwoFactor(player);
+                break;
+            case "status":
+                showStatus(player);
+                break;
+            default:
+                // Assume it's a verification code
+                verifyCode(player, args[0]);
+                break;
         }
     }
 
-    /**
-     * Save secrets to file
-     */
-    private void saveSecrets() {
-        try (FileWriter writer = new FileWriter(secretsFile)) {
-            Map<String, String> saveData = new HashMap<>();
-            for (Map.Entry<UUID, String> entry : secretKeys.entrySet()) {
-                saveData.put(entry.getKey().toString(), entry.getValue());
+    private void showHelp(Player player) {
+        player.sendMessage(Component.text("=== Velocity2FA Commands ===")
+            .color(NamedTextColor.GOLD));
+        player.sendMessage(Component.text("/2fa setup - Set up 2FA for your account")
+            .color(NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("/2fa <code> - Verify your 2FA code")
+            .color(NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("/2fa verify <code> - Verify your 2FA code")
+            .color(NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("/2fa disable - Disable 2FA (requires current code)")
+            .color(NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("/2fa status - Check your 2FA status")
+            .color(NamedTextColor.YELLOW));
+    }
+
+    private void setupTwoFactor(Player player) {
+        try {
+            // Check if player has staff permission
+            if (!hasStaffPermission(player)) {
+                player.sendMessage(Component.text("You don't have permission to use 2FA!")
+                    .color(NamedTextColor.RED));
+                return;
             }
+
+            if (plugin.getTwoFactorManager().hasSecretKey(player.getUniqueId())) {
+                player.sendMessage(Component.text("You already have 2FA enabled! Use /2fa disable to remove it.")
+                    .color(NamedTextColor.RED));
+                return;
+            }
+
+            String secretKey = plugin.getTwoFactorManager().generateSecretKey(player.getUniqueId());
+            String qrUrl = plugin.getTwoFactorManager().generateQRUrl(player.getUsername(), secretKey);
+
+            player.sendMessage(Component.text("=== 2FA Setup ===")
+                .color(NamedTextColor.GOLD));
+            player.sendMessage(Component.text("1. Install an authenticator app (Google Authenticator, Authy, etc.)")
+                .color(NamedTextColor.YELLOW));
+            player.sendMessage(Component.text("2. Scan this QR code or enter the secret manually:")
+                .color(NamedTextColor.YELLOW));
             
-            gson.toJson(saveData, writer);
-            logger.debug("Saved {} 2FA secrets to file", secretKeys.size());
-        } catch (IOException e) {
-            logger.error("Failed to save 2FA secrets", e);
+            player.sendMessage(Component.text("Secret Key: " + secretKey)
+                .color(NamedTextColor.GREEN));
+            
+            player.sendMessage(Component.text("QR Code: Click here to open")
+                .color(NamedTextColor.AQUA)
+                .clickEvent(ClickEvent.openUrl(qrUrl)));
+                
+            player.sendMessage(Component.text("3. After setup, use /2fa <code> to verify and complete setup")
+                .color(NamedTextColor.YELLOW));
+                
+        } catch (Exception e) {
+            plugin.getLogger().error("Error setting up 2FA for player {}: {}", player.getUsername(), e.getMessage(), e);
+            player.sendMessage(Component.text("An error occurred while setting up 2FA. Please try again or contact an administrator.")
+                .color(NamedTextColor.RED));
         }
     }
 
-    /**
-     * Get statistics about 2FA usage
-     */
-    public int getTotalEnabledUsers() {
-        return secretKeys.size();
+    private void verifyCode(Player player, String code) {
+        try {
+            if (!plugin.getTwoFactorManager().hasSecretKey(player.getUniqueId())) {
+                player.sendMessage(Component.text("You don't have 2FA set up! Use /2fa setup first.")
+                    .color(NamedTextColor.RED));
+                return;
+            }
+
+            boolean valid = plugin.getTwoFactorManager().verifyCode(player.getUniqueId(), code);
+            
+            if (valid) {
+                plugin.getAuthenticatedPlayers().add(player.getUsername());
+                plugin.getPendingAuthentication().remove(player.getUsername());
+                
+                player.sendMessage(Component.text("✓ 2FA verification successful! You can now access servers.")
+                    .color(NamedTextColor.GREEN));
+                
+                plugin.getLogger().info("Player {} successfully authenticated with 2FA", player.getUsername());
+            } else {
+                player.sendMessage(Component.text("✗ Invalid 2FA code! Please try again.")
+                    .color(NamedTextColor.RED));
+                
+                plugin.getLogger().warn("Player {} failed 2FA authentication", player.getUsername());
+            }
+        } catch (Exception e) {
+            plugin.getLogger().error("Error verifying 2FA code for player {}: {}", player.getUsername(), e.getMessage(), e);
+            player.sendMessage(Component.text("An error occurred while verifying your code. Please try again.")
+                .color(NamedTextColor.RED));
+        }
+    }
+
+    private void disableTwoFactor(Player player) {
+        if (!plugin.getTwoFactorManager().hasSecretKey(player.getUniqueId())) {
+            player.sendMessage(Component.text("You don't have 2FA enabled!")
+                .color(NamedTextColor.RED));
+            return;
+        }
+
+        player.sendMessage(Component.text("To disable 2FA, please provide your current 2FA code:")
+            .color(NamedTextColor.YELLOW));
+        player.sendMessage(Component.text("Use: /2fa-admin disable " + player.getUsername() + " <code>")
+            .color(NamedTextColor.YELLOW));
+    }
+
+    private void showStatus(Player player) {
+        boolean has2FA = plugin.getTwoFactorManager().hasSecretKey(player.getUniqueId());
+        boolean isAuthenticated = plugin.getAuthenticatedPlayers().contains(player.getUsername());
+        boolean isPending = plugin.getPendingAuthentication().contains(player.getUsername());
+
+        player.sendMessage(Component.text("=== Your 2FA Status ===")
+            .color(NamedTextColor.GOLD));
+        player.sendMessage(Component.text("2FA Enabled: " + (has2FA ? "✓ Yes" : "✗ No"))
+            .color(has2FA ? NamedTextColor.GREEN : NamedTextColor.RED));
+        player.sendMessage(Component.text("Staff Permission: " + (hasStaffPermission(player) ? "✓ Yes" : "✗ No"))
+            .color(hasStaffPermission(player) ? NamedTextColor.GREEN : NamedTextColor.RED));
+        
+        if (has2FA) {
+            player.sendMessage(Component.text("Authenticated This Session: " + (isAuthenticated ? "✓ Yes" : "✗ No"))
+                .color(isAuthenticated ? NamedTextColor.GREEN : NamedTextColor.RED));
+            player.sendMessage(Component.text("Pending Authentication: " + (isPending ? "⚠ Yes" : "✓ No"))
+                .color(isPending ? NamedTextColor.YELLOW : NamedTextColor.GREEN));
+        }
+    }
+
+    private boolean hasStaffPermission(Player player) {
+        return player.hasPermission("staff") || 
+               player.hasPermission("moderator") || 
+               player.hasPermission("admin") ||
+               player.hasPermission("helper") ||
+               player.hasPermission("velocity2fa.staff");
+    }
+
+    @Override
+    public CompletableFuture<List<String>> suggestAsync(Invocation invocation) {
+        return CompletableFuture.completedFuture(List.of("setup", "verify", "disable", "status"));
     }
 }
