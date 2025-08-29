@@ -41,7 +41,9 @@
             <version>${velocity.version}</version>
             <scope>provided</scope>
         </dependency>
-
+dependencies {
+    implementation 'com.warrenstrange:googleauth:1.5.0'
+}
         <!-- TOTP Library for 2FA -->
         <dependency>
             <groupId>com.warrenstrange</groupId>

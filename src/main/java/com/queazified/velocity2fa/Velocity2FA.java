@@ -75,10 +75,8 @@ public class Velocity2FA {
                         if (player.isActive()) {
                             player.sendMessage(Component.text("=== 2FA AUTHENTICATION REQUIRED ===")
                                 .color(NamedTextColor.RED));
-                            Thread.sleep(100); // small delay between messages
                             player.sendMessage(Component.text("Please enter your 2FA code using: /2fa <code>")
                                 .color(NamedTextColor.YELLOW));
-                            Thread.sleep(100);
                             player.sendMessage(Component.text("You cannot join servers until authenticated.")
                                 .color(NamedTextColor.RED));
                         }
