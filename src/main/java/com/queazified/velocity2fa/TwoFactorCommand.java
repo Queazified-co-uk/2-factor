@@ -107,10 +107,10 @@ public class TwoFactorCommand implements SimpleCommand {
                 player.sendMessage(Component.text("=== 2FA Setup ===")
                     .color(NamedTextColor.GOLD));
                 Thread.sleep(100);
-                player.sendMessage(Component.text("1. Install an authenticator app (Google Authenticator, Authy, etc.)")
+                player.sendMessage(Component.text("1. Install an authenticator app (Google Authenticator, Microsoft Authenticator, etc.)")
                     .color(NamedTextColor.YELLOW));
                 Thread.sleep(100);
-                player.sendMessage(Component.text("2. Scan this QR code or enter the secret manually:")
+                player.sendMessage(Component.text("2. Enter the secret manually:")
                     .color(NamedTextColor.YELLOW));
                 Thread.sleep(100);
                 player.sendMessage(Component.text("Secret Key: " + secretKey)
