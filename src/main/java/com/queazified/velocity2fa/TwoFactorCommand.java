@@ -80,36 +80,52 @@ public class TwoFactorCommand implements SimpleCommand {
     private void setupTwoFactor(Player player) {
         // Check if player has staff permission
         if (!hasStaffPermission(player)) {
-            player.sendMessage(Component.text("You don't have permission to use 2FA!")
-                .color(NamedTextColor.RED));
+            try {
+                player.sendMessage(Component.text("You don't have permission to use 2FA!")
+                    .color(NamedTextColor.RED));
+            } catch (Exception e) {
+                // Ignore system chat errors
+            }
             return;
         }
 
         if (plugin.getTwoFactorManager().hasSecretKey(player.getUniqueId())) {
-            player.sendMessage(Component.text("You already have 2FA enabled! Use /2fa disable to remove it.")
-                .color(NamedTextColor.RED));
+            try {
+                player.sendMessage(Component.text("You already have 2FA enabled! Use /2fa disable to remove it.")
+                    .color(NamedTextColor.RED));
+            } catch (Exception e) {
+                // Ignore system chat errors
+            }
             return;
         }
 
         String secretKey = plugin.getTwoFactorManager().generateSecretKey(player.getUniqueId());
         String qrUrl = plugin.getTwoFactorManager().generateQRUrl(player.getUsername(), secretKey);
 
-        player.sendMessage(Component.text("=== 2FA Setup ===")
-            .color(NamedTextColor.GOLD));
-        player.sendMessage(Component.text("1. Install an authenticator app (Google Authenticator, Authy, etc.)")
-            .color(NamedTextColor.YELLOW));
-        player.sendMessage(Component.text("2. Scan this QR code or enter the secret manually:")
-            .color(NamedTextColor.YELLOW));
-        
-        player.sendMessage(Component.text("Secret Key: " + secretKey)
-            .color(NamedTextColor.GREEN));
-        
-        player.sendMessage(Component.text("QR Code: Click here to open")
-            .color(NamedTextColor.AQUA)
-            .clickEvent(ClickEvent.openUrl(qrUrl)));
-            
-        player.sendMessage(Component.text("3. After setup, use /2fa <code> to verify and complete setup")
-            .color(NamedTextColor.YELLOW));
+        if (player.isActive()) {
+            try {
+                player.sendMessage(Component.text("=== 2FA Setup ===")
+                    .color(NamedTextColor.GOLD));
+                Thread.sleep(100);
+                player.sendMessage(Component.text("1. Install an authenticator app (Google Authenticator, Authy, etc.)")
+                    .color(NamedTextColor.YELLOW));
+                Thread.sleep(100);
+                player.sendMessage(Component.text("2. Scan this QR code or enter the secret manually:")
+                    .color(NamedTextColor.YELLOW));
+                Thread.sleep(100);
+                player.sendMessage(Component.text("Secret Key: " + secretKey)
+                    .color(NamedTextColor.GREEN));
+                Thread.sleep(100);
+                player.sendMessage(Component.text("QR Code: Click here to open")
+                    .color(NamedTextColor.AQUA)
+                    .clickEvent(ClickEvent.openUrl(qrUrl)));
+                Thread.sleep(100);
+                player.sendMessage(Component.text("3. After setup, use /2fa <code> to verify and complete setup")
+                    .color(NamedTextColor.YELLOW));
+            } catch (Exception e) {
+                // Ignore system chat errors
+            }
+        }
     }
 
     private void verifyCode(Player player, String code) {

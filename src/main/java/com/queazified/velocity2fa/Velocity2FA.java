@@ -69,22 +69,23 @@ public class Velocity2FA {
             // Check if player has staff permission and 2FA enabled
             if (hasStaffPermission(player) && twoFactorManager.hasSecretKey(player.getUniqueId())) {
                 pendingAuthentication.add(player.getUsername());
-                
-                // Use scheduler to send messages after a short delay to ensure connection is stable
+                // Use scheduler to send messages after a longer delay to ensure connection is stable
                 server.getScheduler().buildTask(this, () -> {
                     try {
                         if (player.isActive()) {
                             player.sendMessage(Component.text("=== 2FA AUTHENTICATION REQUIRED ===")
                                 .color(NamedTextColor.RED));
+                            Thread.sleep(100); // small delay between messages
                             player.sendMessage(Component.text("Please enter your 2FA code using: /2fa <code>")
                                 .color(NamedTextColor.YELLOW));
+                            Thread.sleep(100);
                             player.sendMessage(Component.text("You cannot join servers until authenticated.")
                                 .color(NamedTextColor.RED));
                         }
                     } catch (Exception msgEx) {
                         logger.warn("Failed to send 2FA login message to player {}: {}", player.getUsername(), msgEx.getMessage());
                     }
-                }).delay(1, java.util.concurrent.TimeUnit.SECONDS).schedule();
+                }).delay(2, java.util.concurrent.TimeUnit.SECONDS).schedule();
             }
         } catch (Exception e) {
             logger.error("Error in PostLogin event for player {}: {}", player.getUsername(), e.getMessage(), e);
