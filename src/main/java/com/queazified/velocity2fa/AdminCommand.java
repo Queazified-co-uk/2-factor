@@ -231,9 +231,16 @@ public class AdminCommand implements SimpleCommand {
                 boolean authenticated = expiry != null && expiry > System.currentTimeMillis();
                 boolean pending = plugin.getPendingAuthentication().contains(username);
                 
-                String status = authenticated ? " §a✓" : (pending ? " §e⚠" : " §c✗");
+                Component statusComponent;
                 source.sendMessage(Component.text("- " + username + status)
-                    .color(NamedTextColor.WHITE));
+                if (authenticated) {
+                        statusComponent = Component.text("- " + username + " ✓").color(NamedTextColor.GREEN);
+                } else if (pending) {
+                    statusComponent = Component.text("- " + username + " ⚠").color(NamedTextColor.YELLOW);
+                } else {
+                    statusComponent = Component.text("- " + username + " ✗").color(NamedTextColor.RED);
+                }
+                source.sendMessage(statusComponent);
             }
         }
     }

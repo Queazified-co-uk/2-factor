@@ -116,9 +116,9 @@ public class TwoFactorCommand implements SimpleCommand {
                 player.sendMessage(Component.text("Secret Key: " + secretKey)
                     .color(NamedTextColor.GREEN));
                 Thread.sleep(100);
-                player.sendMessage(Component.text("QR Code: Click here to open")
-                    .color(NamedTextColor.AQUA)
-                    .clickEvent(ClickEvent.openUrl(qrUrl)));
+                //player.sendMessage(Component.text("QR Code: Click here to open")
+                //    .color(NamedTextColor.AQUA)
+                //    .clickEvent(ClickEvent.openUrl(qrUrl)));
                 Thread.sleep(100);
                 player.sendMessage(Component.text("3. After setup, use /2fa <code> to verify and complete setup")
                     .color(NamedTextColor.YELLOW));
