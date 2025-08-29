@@ -41,9 +41,7 @@
             <version>${velocity.version}</version>
             <scope>provided</scope>
         </dependency>
-dependencies {
-    implementation 'com.warrenstrange:googleauth:1.5.0'
-}
+
         <!-- TOTP Library for 2FA -->
         <dependency>
             <groupId>com.warrenstrange</groupId>
@@ -69,17 +67,6 @@ dependencies {
             <artifactId>gson</artifactId>
             <version>2.10.1</version>
         </dependency>
-
-        <!-- Annotations for Velocity (optional, remove if not needed) -->
-        <!--
-        <dependency>
-            <groupId>com.velocitypowered</groupId>
-            <artifactId>velocity-api</artifactId>
-            <version>${velocity.version}</version>
-            <classifier>javadoc</classifier>
-            <scope>provided</scope>
-        </dependency>
-        -->
     </dependencies>
 
     <build>
@@ -112,7 +99,7 @@ dependencies {
                 </configuration>
             </plugin>
 
-            <!-- Maven Shade Plugin (if you need to shade dependencies) -->
+            <!-- Maven Shade Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
