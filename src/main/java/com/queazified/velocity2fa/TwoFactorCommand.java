@@ -122,7 +122,9 @@ public class TwoFactorCommand implements SimpleCommand {
         boolean valid = plugin.getTwoFactorManager().verifyCode(player.getUniqueId(), code);
         
         if (valid) {
-            plugin.getAuthenticatedPlayers().add(player.getUsername());
+            // Session expiry: 12h (can be made configurable)
+            long expiry = System.currentTimeMillis() + 12 * 60 * 60 * 1000L;
+            plugin.getAuthenticatedPlayers().put(player.getUsername(), expiry);
             plugin.getPendingAuthentication().remove(player.getUsername());
             
             player.sendMessage(Component.text("✓ 2FA verification successful! You can now access servers.")
@@ -152,7 +154,8 @@ public class TwoFactorCommand implements SimpleCommand {
 
     private void showStatus(Player player) {
         boolean has2FA = plugin.getTwoFactorManager().hasSecretKey(player.getUniqueId());
-        boolean isAuthenticated = plugin.getAuthenticatedPlayers().contains(player.getUsername());
+        Long expiry = plugin.getAuthenticatedPlayers().get(player.getUsername());
+        boolean isAuthenticated = expiry != null && expiry > System.currentTimeMillis();
         boolean isPending = plugin.getPendingAuthentication().contains(player.getUsername());
 
         player.sendMessage(Component.text("=== Your 2FA Status ===")
@@ -167,6 +170,11 @@ public class TwoFactorCommand implements SimpleCommand {
                 .color(isAuthenticated ? NamedTextColor.GREEN : NamedTextColor.RED));
             player.sendMessage(Component.text("Pending Authentication: " + (isPending ? "⚠ Yes" : "✓ No"))
                 .color(isPending ? NamedTextColor.YELLOW : NamedTextColor.GREEN));
+            if (isAuthenticated && expiry != null) {
+                long minsLeft = (expiry - System.currentTimeMillis()) / 60000L;
+                player.sendMessage(Component.text("Session expires in: " + minsLeft + " min")
+                    .color(NamedTextColor.AQUA));
+            }
         }
     }
 

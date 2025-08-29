@@ -142,10 +142,21 @@ public class AdminCommand implements SimpleCommand {
             targetUuid = playerOpt.get().getUniqueId();
             targetName = playerOpt.get().getUsername();
         } else {
-            // Try to find by stored data (this is basic, you might want to add a UUID lookup)
-            source.sendMessage(Component.text("Player must be online for force-disable. Use regular disable with verification instead.")
-                .color(NamedTextColor.RED));
-            return;
+            // Try to find by stored data (offline removal)
+            // Search secrets.json for UUID by name
+            targetUuid = null;
+            targetName = playerName;
+            for (UUID uuid : plugin.getTwoFactorManager().getAllSecretUUIDs()) {
+                if (uuid.toString().equalsIgnoreCase(playerName)) {
+                    targetUuid = uuid;
+                    break;
+                }
+            }
+            if (targetUuid == null) {
+                source.sendMessage(Component.text("Player must be online for force-disable. Use regular disable with verification instead.")
+                    .color(NamedTextColor.RED));
+                return;
+            }
         }
 
         if (!plugin.getTwoFactorManager().hasSecretKey(targetUuid)) {
@@ -180,7 +191,7 @@ public class AdminCommand implements SimpleCommand {
 
         Player target = playerOpt.get();
         boolean has2FA = plugin.getTwoFactorManager().hasSecretKey(target.getUniqueId());
-        boolean isAuthenticated = plugin.getAuthenticatedPlayers().contains(target.getUsername());
+        boolean isAuthenticated = plugin.getAuthenticatedPlayers().containsKey(target.getUsername());
         boolean isPending = plugin.getPendingAuthentication().contains(target.getUsername());
         boolean hasStaffPerm = hasStaffPermission(target);
 
@@ -216,7 +227,8 @@ public class AdminCommand implements SimpleCommand {
             source.sendMessage(Component.text("Online users with 2FA:")
                 .color(NamedTextColor.AQUA));
             for (String username : onlineUsers) {
-                boolean authenticated = plugin.getAuthenticatedPlayers().contains(username);
+                Long expiry = plugin.getAuthenticatedPlayers().get(username);
+                boolean authenticated = expiry != null && expiry > System.currentTimeMillis();
                 boolean pending = plugin.getPendingAuthentication().contains(username);
                 
                 String status = authenticated ? " §a✓" : (pending ? " §e⚠" : " §c✗");
@@ -228,7 +240,8 @@ public class AdminCommand implements SimpleCommand {
 
     private void showStats(CommandSource source) {
         int totalEnabled = plugin.getTwoFactorManager().getTotalEnabledUsers();
-        int currentlyAuthenticated = plugin.getAuthenticatedPlayers().size();
+        int currentlyAuthenticated = (int) plugin.getAuthenticatedPlayers().values().stream()
+            .filter(expiry -> expiry > System.currentTimeMillis()).count();
         int pendingAuth = plugin.getPendingAuthentication().size();
         int totalOnlineStaff = (int) plugin.getServer().getAllPlayers().stream()
             .filter(this::hasStaffPermission)

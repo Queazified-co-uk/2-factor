@@ -1,4 +1,5 @@
 package com.queazified.velocity2fa;
+import java.util.Map;
 
 import com.google.inject.Inject;
 import com.velocitypowered.api.event.Subscribe;
@@ -33,7 +34,8 @@ public class Velocity2FA {
     
     private TwoFactorManager twoFactorManager;
     private ConfigManager configManager;
-    private final Set<String> authenticatedPlayers = ConcurrentHashMap.newKeySet();
+    // Session cache: username -> expiry timestamp
+    private final Map<String, Long> authenticatedPlayers = new ConcurrentHashMap<>();
     private final Set<String> pendingAuthentication = ConcurrentHashMap.newKeySet();
 
     @Inject
@@ -96,7 +98,7 @@ public class Velocity2FA {
             String limboServer = configManager.getConfig().limboServer;
             boolean isStaff = hasStaffPermission(player);
             boolean has2FA = twoFactorManager.hasSecretKey(player.getUniqueId());
-            boolean isAuthenticated = authenticatedPlayers.contains(player.getUsername());
+            boolean isAuthenticated = authenticatedPlayers.containsKey(player.getUsername());
             String targetServer = event.getOriginalServer().getServerInfo().getName();
 
             // If staff, has 2FA, and not authenticated
@@ -135,6 +137,6 @@ public class Velocity2FA {
     public Path getDataDirectory() { return dataDirectory; }
     public TwoFactorManager getTwoFactorManager() { return twoFactorManager; }
     public ConfigManager getConfigManager() { return configManager; }
-    public Set<String> getAuthenticatedPlayers() { return authenticatedPlayers; }
+    public Map<String, Long> getAuthenticatedPlayers() { return authenticatedPlayers; }
     public Set<String> getPendingAuthentication() { return pendingAuthentication; }
 }
