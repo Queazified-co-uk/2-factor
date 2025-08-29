@@ -1,6 +1,7 @@
 # Velocity2FA
 
 A lightweight **staff-only 2FA** plugin for **Velocity 3** (MC 1.21.x). Premium-only (online-mode) friendly.
+[![Build Velocity Plugin](https://github.com/Queazified-co-uk/2-factor/actions/workflows/build.yml/badge.svg)](https://github.com/Queazified-co-uk/2-factor/actions/workflows/build.yml)
 
 ## Features
 - Only prompts users with permission `staff.2fa`
