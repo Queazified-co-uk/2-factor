@@ -26,7 +26,7 @@ public class AdminCommand implements SimpleCommand {
         String[] args = invocation.arguments();
 
         if (!source.hasPermission("velocity2fa.admin")) {
-            source.sendMessage(Component.text("You don't have permission to use admin commands!")
+            source.sendMessage(Component.text("No permission.")
                 .color(NamedTextColor.RED));
             return;
         }
@@ -91,6 +91,8 @@ public class AdminCommand implements SimpleCommand {
             .color(NamedTextColor.YELLOW));
         source.sendMessage(Component.text("/2fa-admin reload - Reload plugin configuration")
             .color(NamedTextColor.YELLOW));
+        source.sendMessage(Component.text("==================================")
+            .color(NamedTextColor.GOLD));
     }
 
     private void disablePlayerTwoFactor(CommandSource source, String playerName, String code) {

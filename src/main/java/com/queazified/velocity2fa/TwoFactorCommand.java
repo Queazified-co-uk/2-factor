@@ -110,7 +110,7 @@ public class TwoFactorCommand implements SimpleCommand {
                 player.sendMessage(Component.text("1. Install an authenticator app (Google Authenticator, Microsoft Authenticator, etc.)")
                     .color(NamedTextColor.YELLOW));
                 Thread.sleep(100);
-                player.sendMessage(Component.text("2. Enter the secret manually:")
+                player.sendMessage(Component.text("2. Enter the secret manually into your Authenticator:")
                     .color(NamedTextColor.YELLOW));
                 Thread.sleep(100);
                 player.sendMessage(Component.text("Secret Key: " + secretKey)
@@ -143,12 +143,12 @@ public class TwoFactorCommand implements SimpleCommand {
             plugin.getAuthenticatedPlayers().put(player.getUsername(), expiry);
             plugin.getPendingAuthentication().remove(player.getUsername());
             
-            player.sendMessage(Component.text("✓ 2FA verification successful! You can now access servers.")
+            player.sendMessage(Component.text("2FA verification successful! You can now access servers.")
                 .color(NamedTextColor.GREEN));
             
             plugin.getLogger().info("Player {} successfully authenticated with 2FA", player.getUsername());
         } else {
-            player.sendMessage(Component.text("✗ Invalid 2FA code! Please try again.")
+            player.sendMessage(Component.text("Invalid 2FA code! Please try again.")
                 .color(NamedTextColor.RED));
             
             plugin.getLogger().warn("Player {} failed 2FA authentication", player.getUsername());
@@ -157,7 +157,7 @@ public class TwoFactorCommand implements SimpleCommand {
 
     private void disableTwoFactor(Player player) {
         if (!plugin.getTwoFactorManager().hasSecretKey(player.getUniqueId())) {
-            player.sendMessage(Component.text("You don't have 2FA enabled!")
+            player.sendMessage(Component.text("You don't have 2FA enabled.")
                 .color(NamedTextColor.RED));
             return;
         }
